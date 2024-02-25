@@ -1,58 +1,59 @@
 import * as vscode from 'vscode';
 
-const DELIMITERS = ["\"\"", "\'\'", "\`\`", "()", "[]", "{}", "< "]
-
-const DO_NOT_BEGIN = ["/*", "//", "#", "--", "<!--"]
-
 type IndentStyleDef = {
 	arm: vscode.TextEditorDecorationType,
-	bar: vscode.TextEditorDecorationType
+	bar: vscode.TextEditorDecorationType,
+	barHook: vscode.TextEditorDecorationType
 }
 
 function createIndentStyleDef(
 	level: number
 ): IndentStyleDef {
-	const COLOURS = [
-		"#ffaac4", 
-		"#ffafa2", 
-		"#ffb475", 
-		"#f1c000", 
-		"#b7d800", 
-		"#49e97d", 
-		"#00e6ca", 
-		"#00dffa", 
-		"#8ccfff", 
-		"#b1c5ff", 
-		"#d0b8ff", 
-		"#ff9ff7"
-	];
+	const colour = `var(--vscode-cuddle-highlight-${level + 1})`
 	let arm = vscode.window.createTextEditorDecorationType({
-		color: COLOURS[level],
+		color: colour,
 		borderRadius: "2px"
 	})
 	let bar = vscode.window.createTextEditorDecorationType({
 		before: {
 			contentText: "|",
 			color: "transparent",
-			backgroundColor: `color-mix(in srgb, ${COLOURS[level]} 40%, var(--vscode-editor-background))`,
-			textDecoration: `; position: absolute; width: 2px; height: 100%; top: 0; z-index: -2`
+			backgroundColor: colour,
+			textDecoration: `; position: absolute; width: 2px; height: 100%; top: 0; opacity: 0.25`
+		}
+	})
+	let barHook = vscode.window.createTextEditorDecorationType({
+		before: {
+			contentText: "|",
+			color: "transparent",
+			backgroundColor: colour,
+			textDecoration: `; position: absolute; width: 2px; height: calc(50% - 1px); top: 0; opacity: 0.25`
+		},
+		after: {
+			contentText: "|",
+			color: "transparent",
+			backgroundColor: colour,
+			textDecoration: `; position: absolute; width: 1ch; height: 2px; top: calc(50% - 1px); opacity: 0.25`
 		}
 	})
 	return {
 		arm: arm,
-		bar: bar
+		bar: bar,
+		barHook: barHook
 	}
 }
 
 type IndentStyleActual = {
 	arm: vscode.DecorationOptions[],
-	bar: vscode.DecorationOptions[]
+	bar: vscode.DecorationOptions[],
+	barHook: vscode.DecorationOptions[]
 }
 
 function createIndentStyleActual(): IndentStyleActual {
 	return {
 		arm: [],
-		bar: []
+		bar: [],
+		barHook: []
 	}
 }
 
@@ -63,6 +64,7 @@ function applyIndentStyle(
 ) {
 	editor.setDecorations(definition.arm, actual.arm);
 	editor.setDecorations(definition.bar, actual.bar);
+	editor.setDecorations(definition.barHook, actual.barHook);
 }
 
 function measureIndentation(
@@ -101,11 +103,44 @@ type IndentSpan = {
 	splits: number[]
 }
 
+type HighlightWholeLine = "never" | "end" | "endAndMiddle" | "always"
+
+type Configuration = {
+	detection: {
+		requireClosingText: boolean,
+		neverStartWith: string[],
+		onlyStartWith: string[],
+	},
+	display: {
+		drawConnectingLines: boolean,
+		highlightWholeLine: HighlightWholeLine,
+		delimiters: string[]
+	}
+}
+
+function readConfiguration(
+	editor: vscode.TextEditor
+): Configuration {
+	const docConfig = vscode.workspace.getConfiguration("cuddle", editor.document);
+	return {
+		detection: {
+			onlyStartWith: (docConfig.get("detection.onlyStartWith") ?? []) as string[],
+			neverStartWith: (docConfig.get("detection.neverStartWith") ?? []) as string[],
+			requireClosingText: (docConfig.get("detection.requireClosingText") ?? true) as boolean,
+		},
+		display: {
+			drawConnectingLines: (docConfig.get("display.drawConnectingLines") ?? true) as boolean,
+			highlightWholeLine: (docConfig.get("display.highlightWholeLine") ?? "never") as HighlightWholeLine,
+			delimiters: (docConfig.get("display.delimiters") ?? []) as string[],
+		}
+	}
+}
+
 function updateDecorations(
 	editor: vscode.TextEditor,
-	styleDefs: IndentStyleDef[]
+	styleDefs: IndentStyleDef[],
+	config: Configuration
 ) {
-	console.log("[cuddle] Updating decorations...");
 
 	const numStyles = styleDefs.length;
 	const tabSize = getEditorTabSize(editor);
@@ -113,20 +148,30 @@ function updateDecorations(
 	const numLines = lines.length;
 	const styleActuals: IndentStyleActual[] = styleDefs.map(createIndentStyleActual);
 
-	console.log("[cuddle] -> Calculating indentations");
 	let indentations: number[] = [];
-	for(let lineNumber = 0; lineNumber < numLines; lineNumber++) {
-		const line = lines[lineNumber];
-		if (line.trimEnd().length === 0) {
-			// Empty lines don't affect the visual layout of groups, so should not be considered.
-			indentations[lineNumber] = lineNumber > 0 ? indentations[lineNumber - 1] : 0;
-		} else {
-			indentations[lineNumber] = measureIndentation(line, tabSize);
+	{
+		let numEmpty = 0;
+		for(let lineNumber = 0; lineNumber < numLines; lineNumber++) {
+			const line = lines[lineNumber];
+			if (line.trimEnd().length === 0) {
+				// Empty lines don't affect the visual layout of groups. Empty lines adopt the maximum indentation they
+				// are surrounded by. For now, this adopts the indentation from above; higher indentation levels from 
+				// below will be backfilled later.
+				indentations[lineNumber] = 0;
+				numEmpty += 1;
+			} else {
+				const indentation = measureIndentation(line, tabSize);
+				indentations[lineNumber] = indentation;
+				if (numEmpty > 0) {
+					for(let prevLineNumber = lineNumber - numEmpty; prevLineNumber < lineNumber; prevLineNumber++) {
+						indentations[prevLineNumber] = Math.max(indentations[prevLineNumber], indentation);
+					}
+				}
+				numEmpty = 0;
+			}
 		}
 	}
-	console.log(`[cuddle] -> ...indented ${indentations.length} lines`);
 
-	console.log("[cuddle] -> Measuring spans");
 	const completedSpans: IndentSpan[] = [];
 	const inProgressSpans: IndentSpan[] = [];
 	for(let lineNumber = 0; lineNumber < numLines; lineNumber++) {
@@ -137,9 +182,15 @@ function updateDecorations(
 		if (hasContent && lineNumber + 1 < numLines) {
 			const nextIndentation = indentations[lineNumber + 1];
 			if (thisIndentation < nextIndentation) {
-				isOpening = true;
+				isOpening = config.detection.onlyStartWith.length === 0;
 				const trimmed = line.trimStart();
-				for(const ignore of DO_NOT_BEGIN) {
+				for(const require of config.detection.onlyStartWith) {
+					if (trimmed.startsWith(require)) {
+						isOpening = true;
+						break;
+					}
+				}
+				for(const ignore of config.detection.neverStartWith) {
 					if (trimmed.startsWith(ignore)) {
 						isOpening = false;
 						break;
@@ -147,30 +198,51 @@ function updateDecorations(
 				}
 			}
 		}
-		if (hasContent && lineNumber - 1 >= 0) {
-			const prevIndentation = indentations[lineNumber - 1];
-			if (prevIndentation > thisIndentation) {
-				while (true) {
-					const span = inProgressSpans.pop();
-					if (span === undefined) {
-						break;
-					} else if (span.column == thisIndentation) {
-						if (isOpening) {
-							isOpening = false;
-							span.splits.push(lineNumber);
-							inProgressSpans.push(span);
-						} else {
-							span.endLine = lineNumber;
-							completedSpans.push(span)
+		if (lineNumber - 1 >= 0) {
+			if(config.detection.requireClosingText) {
+				if (hasContent) {
+					const prevIndentation = indentations[lineNumber - 1];
+					if (prevIndentation > thisIndentation) {
+						while (true) {
+							const span = inProgressSpans.pop();
+							if (span === undefined) {
+								break;
+							} else if (span.column == thisIndentation) {
+								if (isOpening) {
+									isOpening = false;
+									span.splits.push(lineNumber);
+									inProgressSpans.push(span);
+								} else {
+									span.endLine = lineNumber;
+									completedSpans.push(span);
+								}
+								break;
+							} else if (span.column < thisIndentation) {
+								inProgressSpans.push(span); 
+								break;
+							}
 						}
-						break;
-					} else if (span.column < thisIndentation) {
-						inProgressSpans.push(span); 
-						break;
+					}
+				}
+			} else {
+				const prevIndentation = indentations[lineNumber - 1];
+				if (prevIndentation > thisIndentation) {
+					while (true) {
+						const span = inProgressSpans.pop();
+						if (span === undefined) {
+							break;
+						} else if (span.column >= thisIndentation) {
+							span.endLine = lineNumber - 1;
+							completedSpans.push(span);
+						} else if (span.column < thisIndentation) {
+							inProgressSpans.push(span); 
+							break;
+						}
 					}
 				}
 			}
 		}
+		
 		if (isOpening) {
 			inProgressSpans.push({
 				column: thisIndentation,
@@ -180,12 +252,20 @@ function updateDecorations(
 			})
 		}
 	}
-	console.log(`[cuddle] -> ...measured ${completedSpans.length} spans, with ${inProgressSpans.length} hanging`);
+	if (!config.detection.requireClosingText) {
+		while (true) {
+			const span = inProgressSpans.pop();
+			if (span === undefined) {
+				break;
+			} else {
+				span.endLine = numLines - 1;
+				completedSpans.push(span);
+			}
+		}
+	}
 
-	console.log("[cuddle] -> Sorting spans");
 	completedSpans.sort((a, b) => a.startLine - b.startLine);
 
-	console.log("[cuddle] -> Building visual styling");
 	let styleIndex = 0;
 	for(const span of completedSpans) {
 		styleIndex = (styleIndex + 1) % numStyles;
@@ -203,28 +283,39 @@ function updateDecorations(
 						break;
 					}
 				}
-				let endIndex = startIndex;
+				let endIndex = line.length;
 
-				{
+				let highlightWholeLine;
+				if (config.display.highlightWholeLine === "never") {
+					highlightWholeLine = false;
+				} else if (config.display.highlightWholeLine === "end") {
+					highlightWholeLine = isEnd;
+				} else if (config.display.highlightWholeLine === "endAndMiddle") {
+					highlightWholeLine = !isStart;
+				} else if (config.display.highlightWholeLine === "always") {
+					highlightWholeLine = true;
+				}
+
+				if (!highlightWholeLine) {
+					endIndex = startIndex;
 					const openChar = line.charAt(endIndex);
-					let closingDelimiter = null;
-					for(const delim of DELIMITERS) {
+					let closingDelimiters = null;
+					for(const delim of config.display.delimiters) {
 						if (delim.charAt(0) == openChar) {
-							closingDelimiter = delim.charAt(1);
+							closingDelimiters = delim.substring(1).split("");
 							break;
 						}
 					}
-					if (closingDelimiter != null) {
+					if (closingDelimiters != null) {
 						endIndex++;
 						for(; endIndex < line.length; endIndex++) {
 							const char = line.charAt(endIndex)
-							if (char == closingDelimiter) {
+							if (closingDelimiters.includes(char)) {
 								endIndex++;
 								break;
 							}
 						}
 					} else {
-						// Best-guess highlighting algorithm
 						let isWord = undefined;
 						for(; endIndex < line.length; endIndex++) {
 							const char = line.charAt(endIndex)
@@ -243,23 +334,27 @@ function updateDecorations(
 
 				let hoverMessage = undefined;
 				if (!isStart) {
-					const referenceLine = splitIndex < 1 ? span.startLine : span.splits[splitIndex - 1]
-					styleActuals[styleIndex].arm.push({
-						range: new vscode.Range(lineNumber, startIndex, lineNumber, endIndex),
-						hoverMessage: `\tLine ${referenceLine + 1}: ${lines[referenceLine].trim()}`
-					})
+					const referenceLine = splitIndex < 1 ? span.startLine : span.splits[splitIndex - 1];
+					hoverMessage = `\t${lines[referenceLine].trim()}`;
 				}
 
-				styleActuals[styleIndex].arm.push({
-					range: new vscode.Range(lineNumber, startIndex, lineNumber, endIndex),
-					hoverMessage: hoverMessage
-				})
-				
-			} else {
-				styleActuals[styleIndex].bar.push({
+				if (config.detection.requireClosingText || isStart) {
+					styleActuals[styleIndex].arm.push({
+						range: new vscode.Range(lineNumber, startIndex, lineNumber, endIndex),
+						hoverMessage: hoverMessage
+					})
+					continue;
+				}
+			}
+			if (config.display.drawConnectingLines) {
+				const styleActual = isEnd ? styleActuals[styleIndex].barHook : styleActuals[styleIndex].bar;
+				styleActual.push({
 					range: new vscode.Range(lineNumber, 0, lineNumber, 1),
 					renderOptions: {
 						before: {
+							fontWeight: `; left: ${span.column}ch;`
+						},
+						after: {
 							fontWeight: `; left: ${span.column}ch;`
 						}
 					}
@@ -268,21 +363,14 @@ function updateDecorations(
 		}
 	}
 	
-	console.log("[cuddle] -> Applying visuals to editor");
 	for(let styleIndex = 0; styleIndex < numStyles; styleIndex++) {
 		applyIndentStyle(editor, styleDefs[styleIndex], styleActuals[styleIndex]);
 	}
-
-	console.log("[cuddle] -> ...all done");
 }
 
 export function activate(
 	context: vscode.ExtensionContext
 ) {
-
-	console.log("[cuddle] Activating");
-	vscode.window.showInformationMessage("Started cuddle");
-
 	const INDENT_STYLE_DEFS: IndentStyleDef[] = [];
 	for(let level = 0; level < 12; level++) {
 		INDENT_STYLE_DEFS[level] = createIndentStyleDef(level);
@@ -303,7 +391,8 @@ export function activate(
 					if (activeEditor !== undefined) {
 						updateDecorations(
 							activeEditor,
-							INDENT_STYLE_DEFS
+							INDENT_STYLE_DEFS,
+							readConfiguration(activeEditor)
 						);
 					}
 				},
@@ -313,7 +402,8 @@ export function activate(
 			if (activeEditor !== undefined) {
 				updateDecorations(
 					activeEditor,
-					INDENT_STYLE_DEFS
+					INDENT_STYLE_DEFS,
+					readConfiguration(activeEditor)
 				);
 			}
 		}

@@ -10,117 +10,176 @@
 	"Other"
   ],
   "activationEvents": [
-	"*"
+	"onLanguage"
   ],
   "main": "./out/extension.js",
   "contributes": {
+	"configuration": {
+		"title": "Cuddle",
+		"properties": {
+			"cuddle.detection.requireClosingText": {
+				"type": "boolean",
+				"default": false,
+				"scope": "language-overridable",
+				"description": "Prevents blocks from being created unless there is closing text at the same indentation level. Disable this in Python-like languages where there is no closing text."
+			},
+			"cuddle.detection.neverStartWith": {
+				"type": "array",
+				"items": {
+					"type": "string",
+					"minLength": 1
+				},
+				"default": ["/*", "//", "#", "--", "<!--"],
+				"scope": "language-overridable",
+				"description": "If a line starts with one of these entries, it will never draw an indented block, even if followed by indented text."
+			},
+			"cuddle.detection.onlyStartWith": {
+				"type": "array",
+				"items": {
+					"type": "string",
+					"minLength": 1
+				},
+				"default": [],
+				"scope": "language-overridable",
+				"description": "Indented blocks will only be drawn for lines starting with one of these entries. Leave empty to allow any line to draw an indented block."
+			},
+			"cuddle.display.drawConnectingLines": {
+				"type": "boolean",
+				"default": true,
+				"description": "Draws coloured vertical lines to the left of indented blocks, to visually connect the highlighted lines of code."
+			},
+			"cuddle.display.highlightWholeLine": {
+				"type": "string",
+				"default": "never",
+				"enum": ["never", "end", "endAndMiddle", "always"],
+				"enumItemLabels": ["Never", "Ending lines only", "Ending and middle lines", "Always"],
+				"enumDescriptions": [
+					"All lines surrounding blocks only colour their first word or delimited sequence.",
+					"Lines that end blocks are completely coloured.",
+					"Lines that end blocks, or which split blocks in the middle, are completely coloured.",
+					"All lines surrounding blocks are completely coloured."
+				],
+				"description": "Colours all words on highlighted lines. Otherwise, only the first word or delimited sequence is highlighted."
+			},
+			"cuddle.display.delimiters": {
+				"type": "array",
+				"items": {
+					"type": "string",
+					"minLength": 1
+				},
+				"default": ["\"\"", "''", "``", "( )", "[ ]", "{ }", "< >"],
+				"scope": "language-overridable",
+				"description": "If a highlighted line starts with the first character of an entry, the highlighting will continue until one of the other characters are encountered."
+			}
+		}	
+	},
 	"colors": [
 		{
-			"id": "cuddle.indent.level1",
-			"description": "Indentation level 1 colour",
+			"id": "cuddle.highlight.1",
+			"description": "Cuddle highlighting colour 1",
 			"defaults": {
-				"dark": "#F44",
-				"light": "#A00",
-				"highContrast": "#F00"
+				"dark": "#ffaac4",
+				"light": "#e94b8a",
+				"highContrast": "#ff5799"
 			}
 		},
 		{
-			"id": "cuddle.indent.level2",
-			"description": "Indentation level 2 colour",
+			"id": "cuddle.highlight.2",
+			"description": "Cuddle highlighting colour 2",
 			"defaults": {
-				"dark": "#FA4",
-				"light": "#A60",
-				"highContrast": "#F80"
+				"dark": "#ffafa2",
+				"light": "#f0503d",
+				"highContrast": "#ff6551"
 			}
 		},
 		{
-			"id": "cuddle.indent.level3",
-			"description": "Indentation level 3 colour",
+			"id": "cuddle.highlight.3",
+			"description": "Cuddle highlighting colour 3",
 			"defaults": {
-				"dark": "#FF4",
-				"light": "#AA0",
-				"highContrast": "#FF0"
+				"dark": "#ffb475",
+				"light": "#d17400",
+				"highContrast": "#e68100"
 			}
 		},
 		{
-			"id": "cuddle.indent.level4",
-			"description": "Indentation level 4 colour",
+			"id": "cuddle.highlight.4",
+			"description": "Cuddle highlighting colour 4",
 			"defaults": {
-				"dark": "#AF4",
-				"light": "#6A0",
-				"highContrast": "#8F0"
+				"dark": "#f1c000",
+				"light": "#af8a00",
+				"highContrast": "#c19900"
 			}
 		},
 		{
-			"id": "cuddle.indent.level5",
-			"description": "Indentation level 5 colour",
+			"id": "cuddle.highlight.5",
+			"description": "Cuddle highlighting colour 5",
 			"defaults": {
-				"dark": "#4F4",
-				"light": "#0A0",
-				"highContrast": "#0F0"
+				"dark": "#b7d800",
+				"light": "#849c00",
+				"highContrast": "#92ac00"
 			}
 		},
 		{
-			"id": "cuddle.indent.level6",
-			"description": "Indentation level 6 colour",
+			"id": "cuddle.highlight.6",
+			"description": "Cuddle highlighting colour 6",
 			"defaults": {
-				"dark": "#4FA",
-				"light": "#0A6",
-				"highContrast": "#0F8"
+				"dark": "#49e97d",
+				"light": "#00ac4f",
+				"highContrast": "#00be58"
 			}
 		},
 		{
-			"id": "cuddle.indent.level7",
-			"description": "Indentation level 7 colour",
+			"id": "cuddle.highlight.7",
+			"description": "Cuddle highlighting colour 7",
 			"defaults": {
-				"dark": "#4FF",
-				"light": "#0AA",
-				"highContrast": "#0FF"
+				"dark": "#00e6ca",
+				"light": "#00a692",
+				"highContrast": "#00b8a1"
 			}
 		},
 		{
-			"id": "cuddle.indent.level8",
-			"description": "Indentation level 8 colour",
+			"id": "cuddle.highlight.8",
+			"description": "Cuddle highlighting colour 8",
 			"defaults": {
-				"dark": "#4AF",
-				"light": "#06A",
-				"highContrast": "#08F"
+				"dark": "#00dffa",
+				"light": "#00a1b5",
+				"highContrast": "#00b2c8"
 			}
 		},
 		{
-			"id": "cuddle.indent.level9",
-			"description": "Indentation level 9 colour",
+			"id": "cuddle.highlight.9",
+			"description": "Cuddle highlighting colour 9",
 			"defaults": {
-				"dark": "#44F",
-				"light": "#00A",
-				"highContrast": "#00F"
+				"dark": "#8ccfff",
+				"light": "#0099e0",
+				"highContrast": "#00a9f7"
 			}
 		},
 		{
-			"id": "cuddle.indent.level10",
-			"description": "Indentation level 10 colour",
+			"id": "cuddle.highlight.10",
+			"description": "Cuddle highlighting colour 10",
 			"defaults": {
-				"dark": "#A4F",
-				"light": "#60A",
-				"highContrast": "#80F"
+				"dark": "#b1c5ff",
+				"light": "#6483ff",
+				"highContrast": "#7997ff"
 			}
 		},
 		{
-			"id": "cuddle.indent.level11",
-			"description": "Indentation level 11 colour",
+			"id": "cuddle.highlight.11",
+			"description": "Cuddle highlighting colour 11",
 			"defaults": {
-				"dark": "#F4F",
-				"light": "#A0A",
-				"highContrast": "#F0F"
+				"dark": "#d0b8ff",
+				"light": "#a46bf5",
+				"highContrast": "#b17eff"
 			}
 		},
 		{
-			"id": "cuddle.indent.level12",
-			"description": "Indentation level 12 colour",
+			"id": "cuddle.highlight.12",
+			"description": "Cuddle highlighting colour 12",
 			"defaults": {
-				"dark": "#F4A",
-				"light": "#A06",
-				"highContrast": "#F08"
+				"dark": "#ff9ff7",
+				"light": "#cf57c8",
+				"highContrast": "#ff12f7"
 			}
 		}
 	]
