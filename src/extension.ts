@@ -115,7 +115,6 @@ function updateDecorations(
 
 	console.log("[cuddle] -> Calculating indentations");
 	let indentations: number[] = [];
-	let emptyLines: boolean[] = [];
 	for(let lineNumber = 0; lineNumber < numLines; lineNumber++) {
 		const line = lines[lineNumber];
 		if (line.trimEnd().length === 0) {
