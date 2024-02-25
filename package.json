@@ -4,38 +4,144 @@
   "description": "Indentation highlighting in the style of block-based visual programming",
   "version": "0.0.1",
   "engines": {
-    "vscode": "^1.86.0"
+	"vscode": "^1.86.0"
   },
   "categories": [
-    "Other"
+	"Other"
   ],
-  "activationEvents": [],
+  "activationEvents": [
+	"*"
+  ],
   "main": "./out/extension.js",
   "contributes": {
-    "commands": [
-      {
-        "command": "cuddle.helloWorld",
-        "title": "Hello World"
-      }
-    ]
+	"colors": [
+		{
+			"id": "cuddle.indent.level1",
+			"description": "Indentation level 1 colour",
+			"defaults": {
+				"dark": "#F44",
+				"light": "#A00",
+				"highContrast": "#F00"
+			}
+		},
+		{
+			"id": "cuddle.indent.level2",
+			"description": "Indentation level 2 colour",
+			"defaults": {
+				"dark": "#FA4",
+				"light": "#A60",
+				"highContrast": "#F80"
+			}
+		},
+		{
+			"id": "cuddle.indent.level3",
+			"description": "Indentation level 3 colour",
+			"defaults": {
+				"dark": "#FF4",
+				"light": "#AA0",
+				"highContrast": "#FF0"
+			}
+		},
+		{
+			"id": "cuddle.indent.level4",
+			"description": "Indentation level 4 colour",
+			"defaults": {
+				"dark": "#AF4",
+				"light": "#6A0",
+				"highContrast": "#8F0"
+			}
+		},
+		{
+			"id": "cuddle.indent.level5",
+			"description": "Indentation level 5 colour",
+			"defaults": {
+				"dark": "#4F4",
+				"light": "#0A0",
+				"highContrast": "#0F0"
+			}
+		},
+		{
+			"id": "cuddle.indent.level6",
+			"description": "Indentation level 6 colour",
+			"defaults": {
+				"dark": "#4FA",
+				"light": "#0A6",
+				"highContrast": "#0F8"
+			}
+		},
+		{
+			"id": "cuddle.indent.level7",
+			"description": "Indentation level 7 colour",
+			"defaults": {
+				"dark": "#4FF",
+				"light": "#0AA",
+				"highContrast": "#0FF"
+			}
+		},
+		{
+			"id": "cuddle.indent.level8",
+			"description": "Indentation level 8 colour",
+			"defaults": {
+				"dark": "#4AF",
+				"light": "#06A",
+				"highContrast": "#08F"
+			}
+		},
+		{
+			"id": "cuddle.indent.level9",
+			"description": "Indentation level 9 colour",
+			"defaults": {
+				"dark": "#44F",
+				"light": "#00A",
+				"highContrast": "#00F"
+			}
+		},
+		{
+			"id": "cuddle.indent.level10",
+			"description": "Indentation level 10 colour",
+			"defaults": {
+				"dark": "#A4F",
+				"light": "#60A",
+				"highContrast": "#80F"
+			}
+		},
+		{
+			"id": "cuddle.indent.level11",
+			"description": "Indentation level 11 colour",
+			"defaults": {
+				"dark": "#F4F",
+				"light": "#A0A",
+				"highContrast": "#F0F"
+			}
+		},
+		{
+			"id": "cuddle.indent.level12",
+			"description": "Indentation level 12 colour",
+			"defaults": {
+				"dark": "#F4A",
+				"light": "#A06",
+				"highContrast": "#F08"
+			}
+		}
+	]
   },
   "scripts": {
-    "vscode:prepublish": "npm run compile",
-    "compile": "tsc -p ./",
-    "watch": "tsc -watch -p ./",
-    "pretest": "npm run compile && npm run lint",
-    "lint": "eslint src --ext ts",
-    "test": "vscode-test"
+	"vscode:prepublish": "npm run compile",
+	"compile": "tsc -p ./",
+	"watch": "tsc -watch -p ./",
+	"pretest": "npm run compile && npm run lint",
+	"lint": "eslint src --ext ts",
+	"test": "vscode-test"
   },
   "devDependencies": {
-    "@types/vscode": "^1.86.0",
-    "@types/mocha": "^10.0.6",
-    "@types/node": "18.x",
-    "@typescript-eslint/eslint-plugin": "^7.0.2",
-    "@typescript-eslint/parser": "^7.0.2",
-    "eslint": "^8.56.0",
-    "typescript": "^5.3.3",
-    "@vscode/test-cli": "^0.0.6",
-    "@vscode/test-electron": "^2.3.9"
+	"@types/vscode": "^1.86.0",
+	"@types/mocha": "^10.0.6",
+	"@types/node": "18.x",
+	"@typescript-eslint/eslint-plugin": "^7.0.2",
+	"@typescript-eslint/parser": "^7.0.2",
+	"eslint": "^8.56.0",
+	"typescript": "^5.3.3",
+	"@vscode/test-cli": "^0.0.6",
+	"@vscode/test-electron": "^2.3.9"
   }
 }
